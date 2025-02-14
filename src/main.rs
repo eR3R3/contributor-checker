@@ -62,35 +62,55 @@ async fn fetch_contributors(repo: &str) -> Result<Vec<Value>, Box<dyn Error>> {
 }
 
 async fn fetch_contributor_activity(repo: &str, username: &str) -> Result<(), Box<dyn Error>> {
-    let url = format!("{}/{}/commits", GITHUB_API, repo);
     let client = reqwest::Client::new();
+    let mut all_commits = Vec::new();
+    let current_year = Utc::now().year();
 
-    let response = client
-        .get(&url)
-        .header("User-Agent", "Rust-GitHub-CLI")
-        .query(&[
-            ("author", username),
-            ("per_page", "100"),
-            ("since", "2024-01-01"),  // Last year's commits
-        ])
-        .send()
-        .await?;
+    for year in (2000..=current_year).rev() {
+        let start_date = format!("{}-01-01T00:00:00Z", year);
+        let end_date = if year == current_year {
+            Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string()
+        } else {
+            format!("{}-12-31T23:59:59Z", year)
+        };
 
-    if response.status().is_success() {
-        let commits: Vec<Value> = response.json().await?;
+        let url = format!("{}/{}/commits", GITHUB_API, repo);
+        let response = client
+            .get(&url)
+            .header("User-Agent", "Rust-GitHub-CLI")
+            .query(&[
+                ("author", username),
+                ("per_page", "100"),
+                ("since", &start_date),
+                ("until", &end_date),
+            ])
+            .send()
+            .await?;
+
+        if response.status().is_success() {
+            let year_commits: Vec<Value> = response.json().await?;
+            if !year_commits.is_empty() {
+                all_commits.extend(year_commits);
+            }
+        } else if response.status() != reqwest::StatusCode::NOT_FOUND {
+            println!("无法获取{}年的用户活动数据，状态码: {}", year, response.status());
+            return Err("Failed to fetch contributor activity".into());
+        }
+    }
+
+    if !all_commits.is_empty() {
         println!("\n{}的贡献热力图：", username);
-        display_heatmap(&commits)?;
+        display_heatmap(&all_commits)?;
         Ok(())
     } else {
-        println!("无法获取用户活动数据，状态码: {}", response.status());
-        Err("Failed to fetch contributor activity".into())
+        println!("未找到该用户的贡献记录");
+        Ok(())
     }
 }
 
 fn display_heatmap(commits: &[Value]) -> Result<(), Box<dyn Error>> {
     let mut commits_by_year: HashMap<i32, HashMap<String, i32>> = HashMap::new();
 
-    // Group commits by year first
     for commit in commits {
         if let Some(date_str) = commit["commit"]["author"]["date"].as_str() {
             if let Ok(date) = DateTime::parse_from_rfc3339(date_str) {
@@ -106,14 +126,12 @@ fn display_heatmap(commits: &[Value]) -> Result<(), Box<dyn Error>> {
         }
     }
 
-    // Sort years in descending order
     let mut years: Vec<i32> = commits_by_year.keys().cloned().collect();
     years.sort_unstable_by(|a, b| b.cmp(a));
 
     println!("Current Date and Time (UTC): {}", Utc::now().format("%Y-%m-%d %H:%M:%S"));
     println!("Current User's Login: eR3R3\n");
 
-    // Display heatmap for each year
     for &year in &years {
         println!("\nContributions for {}:", year);
 
@@ -140,7 +158,6 @@ fn display_heatmap(commits: &[Value]) -> Result<(), Box<dyn Error>> {
 
         let mut max_week: usize = 0;
 
-        // Fill matrix for this year
         let mut current_date = year_start;
         while current_date <= year_end {
             let week_number = current_date.iso_week().week() as usize - 1;
@@ -167,11 +184,11 @@ fn display_heatmap(commits: &[Value]) -> Result<(), Box<dyn Error>> {
                 let block = "■ ";
                 let colored_block = match count {
                     0 => block.truecolor(250, 250, 210),
-                    1 => block.truecolor(152 ,251, 152),
-                    2..=3 => block.truecolor(127 ,255, 0),
-                    4..=6 => block.truecolor(0 ,255 ,0),
-                    7..=9 => block.truecolor(50 ,205 ,50),
-                    _ => block.truecolor(34 ,139, 34),
+                    1 => block.truecolor(152, 251, 152),
+                    2..=3 => block.truecolor(127, 255, 0),
+                    4..=6 => block.truecolor(0, 255, 0),
+                    7..=9 => block.truecolor(50, 205, 50),
+                    _ => block.truecolor(34, 139, 34),
                 };
                 print!("{}", colored_block);
             }
@@ -181,12 +198,11 @@ fn display_heatmap(commits: &[Value]) -> Result<(), Box<dyn Error>> {
 
     println!("\nContribution Legend:");
     print!("{} No contributions    ", "■ ".truecolor(250, 250, 210));
-    print!("{} 1 contribution    ", "■ ".truecolor(152 ,251, 152));
-    print!("{} 2-3 contributions    ", "■ ".truecolor(127 ,255, 0));
-    print!("{} 4-6 contributions    ", "■ ".truecolor(0 ,255 ,0));
-    print!("{} 7-9 contributions    ", "■ ".truecolor(0 ,255 ,0));
-    println!("{} 10+ contributions", "■ ".truecolor(34 ,139, 34));
-
+    print!("{} 1 contribution    ", "■ ".truecolor(152, 251, 152));
+    print!("{} 2-3 contributions    ", "■ ".truecolor(127, 255, 0));
+    print!("{} 4-6 contributions    ", "■ ".truecolor(0, 255, 0));
+    print!("{} 7-9 contributions    ", "■ ".truecolor(50, 205, 50));
+    println!("{} 10+ contributions", "■ ".truecolor(34, 139, 34));
 
     Ok(())
 }
