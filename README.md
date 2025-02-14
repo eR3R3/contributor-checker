@@ -28,6 +28,9 @@ cchecker <Repo Owner>/<GitHub Repo> <Github User>
 
 cchecker <Repo Owner>/<Github Repo>
 #See All the Contributors with Commit Ranking
+
+cchecker 
+#Check the Current Remote Repo
 ```
 
 ## 欢迎 PR 或 Issue！🎉
