@@ -11,7 +11,8 @@ Contributor Checker
 ### 1. 克隆代码 Clone
 ```sh
 git clone https://github.com/eR3R3/contributor-checker.git
-cd contributor_checker
+
+cd contributor-checker
 
 cargo build --release
 
@@ -22,15 +23,13 @@ sudo mkdir -p /usr/local/bin
 
 ### 2. 使用方法 Usage
 ```
-cchecker <GitHub用户名>
+cchecker <Repo Owner>/<GitHub Repo> <Github User>
+#Basic Syntax
 
-cchecker apple
-
-cargo run --release -- <GitHub用户名>
-
-sudo rm /usr/local/bin/cchecker
+cchecker <Repo Owner>/<Github Repo>
+#See All the Contributors with Commit Ranking
 ```
 
 ## 欢迎 PR 或 Issue！🎉
 
-📧 联系方式：er1r1@qq.com
+📧 电子邮箱 Email：er1r1@qq.com
