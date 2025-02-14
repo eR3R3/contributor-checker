@@ -1,0 +1,227 @@
+use clap::{Arg, Command};
+use reqwest;
+use serde_json::Value;
+use std::error::Error;
+use std::io::{self, Write};
+use std::process::Command as Cmd;
+use chrono::{DateTime, Utc, TimeZone, Datelike, Duration};
+use colored::*;
+
+const GITHUB_API: &str = "https://api.github.com/repos";
+
+fn get_git_remote() -> Option<String> {
+    let output = Cmd::new("git")
+        .arg("remote")
+        .arg("get-url")
+        .arg("origin")
+        .output()
+        .ok()?;
+
+    if output.status.success() {
+        let url = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        Some(url)
+    } else {
+        None
+    }
+}
+
+fn parse_github_repo(url: &str) -> Option<String> {
+    if let Some(pos) = url.find("github.com") {
+        let repo = &url[pos + 11..];
+        let repo = repo.trim_end_matches(".git");
+        Some(repo.to_string())
+    } else {
+        None
+    }
+}
+
+async fn fetch_contributors(repo: &str) -> Result<Vec<Value>, Box<dyn Error>> {
+    let url = format!("{}/{}/contributors", GITHUB_API, repo);
+    let client = reqwest::Client::new();
+
+    let response = client
+        .get(&url)
+        .header("User-Agent", "Rust-GitHub-CLI")
+        .send()
+        .await?;
+
+    if response.status().is_success() {
+        let contributors: Vec<Value> = response.json().await?;
+        println!("贡献者列表：");
+        for contributor in &contributors {
+            let name = contributor["login"].as_str().unwrap_or("Unknown");
+            let contributions = contributor["contributions"].as_i64().unwrap_or(0);
+            println!("{}: {} commits", name, contributions);
+        }
+        Ok(contributors)
+    } else {
+        println!("无法获取数据，状态码: {}", response.status());
+        Err("Failed to fetch contributors".into())
+    }
+}
+
+async fn fetch_contributor_activity(repo: &str, username: &str) -> Result<(), Box<dyn Error>> {
+    let url = format!("{}/{}/commits", GITHUB_API, repo);
+    let client = reqwest::Client::new();
+
+    let response = client
+        .get(&url)
+        .header("User-Agent", "Rust-GitHub-CLI")
+        .query(&[
+            ("author", username),
+            ("per_page", "100"),
+            ("since", "2024-01-01"),  // Last year's commits
+        ])
+        .send()
+        .await?;
+
+    if response.status().is_success() {
+        let commits: Vec<Value> = response.json().await?;
+        println!("\n{}的贡献热力图：", username);
+        display_heatmap(&commits)?;
+        Ok(())
+    } else {
+        println!("无法获取用户活动数据，状态码: {}", response.status());
+        Err("Failed to fetch contributor activity".into())
+    }
+}
+
+fn display_heatmap(commits: &[Value]) -> Result<(), Box<dyn Error>> {
+    let mut commit_count_by_day: std::collections::HashMap<String, i32> = std::collections::HashMap::new();
+
+    // Count commits for each day
+    for commit in commits {
+        if let Some(date_str) = commit["commit"]["author"]["date"].as_str() {
+            if let Ok(date) = DateTime::parse_from_rfc3339(date_str) {
+                let date_key = date.format("%Y-%m-%d").to_string();
+                *commit_count_by_day.entry(date_key).or_insert(0) += 1;
+            }
+        }
+    }
+
+    let now = Utc::now();
+    let year_ago = now - Duration::days(365);
+
+    println!("Current Date and Time (UTC): {}", now.format("%Y-%m-%d %H:%M:%S"));
+    println!("Showing contributions from {} to {}\n",
+             year_ago.format("%Y-%m-%d"),
+             now.format("%Y-%m-%d"));
+
+    // Print the days of the week
+    println!("     Mon Tue Wed Thu Fri Sat Sun");
+
+    // Create a matrix of 7 rows (days) and ~53 columns (weeks)
+    let mut contribution_matrix = vec![vec![0i32; 53]; 7];
+    let mut max_week: usize = 0;
+
+    // Fill the matrix
+    for days_back in 0..365 {
+        let date = now - Duration::days(days_back);
+        let week_number = (days_back / 7) as usize;
+        let weekday = date.weekday().num_days_from_monday() as usize;
+        let date_str = date.format("%Y-%m-%d").to_string();
+
+        if week_number < 53 {
+            contribution_matrix[weekday][week_number] =
+                commit_count_by_day.get(&date_str).copied().unwrap_or(0);
+            max_week = max_week.max(week_number);
+        }
+    }
+
+    // Print the matrix
+    for day in 0..7 {
+        print!("    ");
+        for week in 0..=max_week {
+            let count = contribution_matrix[day][week];
+            let block = "■ ";
+            let colored_block = match count {
+                0 => block.truecolor(238, 238, 238),
+                1 => block.truecolor(140, 198, 101),
+                2..=3 => block.truecolor(74, 163, 50),
+                4..=6 => block.truecolor(48, 138, 29),
+                _ => block.truecolor(33, 110, 20),
+            };
+            print!("{}", colored_block);
+        }
+        println!();
+    }
+
+    println!("\nContribution Legend:");
+    print!("{}No contributions    ", "■ ".truecolor(238, 238, 238));
+    print!("{}1 contribution    ", "■ ".truecolor(140, 198, 101));
+    print!("{}2-3 contributions    ", "■ ".truecolor(74, 163, 50));
+    print!("{}4-6 contributions    ", "■ ".truecolor(48, 138, 29));
+    println!("{}7+ contributions", "■ ".truecolor(33, 110, 20));
+
+    Ok(())
+}
+
+async fn prompt_for_contributor(contributors: &[Value]) -> Option<String> {
+    println!("\n是否要查看特定贡献者的贡献热力图？(y/n)");
+    let mut input = String::new();
+    io::stdout().flush().unwrap();
+    io::stdin().read_line(&mut input).ok()?;
+
+    if input.trim().to_lowercase() == "y" {
+        println!("\n请输入贡献者用户名：");
+        let mut username = String::new();
+        io::stdin().read_line(&mut username).ok()?;
+        Some(username.trim().to_string())
+    } else {
+        None
+    }
+}
+
+#[tokio::main]
+async fn main() {
+    let matches = Command::new("github-contributions")
+        .version("1.0")
+        .about("查看 GitHub 项目贡献者")
+        .arg(
+            Arg::new("repo")
+                .help("GitHub 仓库名，例如 'rust-lang/rust'")
+                .required(false),
+        )
+        .arg(
+            Arg::new("contributor")
+                .help("特定贡献者的用户名")
+                .required(false),
+        )
+        .get_matches();
+
+    let repo = if let Some(repo) = matches.get_one::<String>("repo") {
+        repo.clone()
+    } else if let Some(url) = get_git_remote() {
+        match parse_github_repo(&url) {
+            Some(repo) => repo,
+            None => {
+                eprintln!("无法解析 GitHub 仓库名，请手动提供");
+                return;
+            }
+        }
+    } else {
+        eprintln!("无法获取远程仓库，请在 Git 仓库内运行");
+        return;
+    };
+
+    println!("查询 GitHub 项目: {}", repo);
+
+    match fetch_contributors(&repo).await {
+        Ok(contributors) => {
+            let contributor = if let Some(contributor) = matches.get_one::<String>("contributor") {
+                Some(contributor.clone())
+            } else {
+                prompt_for_contributor(&contributors).await
+            };
+
+            if let Some(username) = contributor {
+                if let Err(e) = fetch_contributor_activity(&repo, &username).await {
+                    eprintln!("获取贡献者活动失败: {}", e);
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!("请求失败: {}", e);
+        }
+    }
+}
