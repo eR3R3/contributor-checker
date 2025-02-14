@@ -166,12 +166,12 @@ fn display_heatmap(commits: &[Value]) -> Result<(), Box<dyn Error>> {
                 let count = contribution_matrix[day][week];
                 let block = "■ ";
                 let colored_block = match count {
-                    0 => block.truecolor(250, 250, 210),  // White (no contribution)
-                    1 => block.truecolor(152 ,251, 152),    // Yellow (1 contribution)
-                    2..=3 => block.truecolor(127 ,255, 0), // Orange (2-3 contributions)
-                    4..=6 => block.truecolor(0 ,255 ,0),  // Red-Orange (4-6 contributions)
-                    7..=9 => block.truecolor(50 ,205 ,50),   // Red (7-9 contributions)
-                    _ => block.truecolor(34 ,139, 34),       // Dark Red (10+ contributions)
+                    0 => block.truecolor(250, 250, 210),
+                    1 => block.truecolor(152 ,251, 152),
+                    2..=3 => block.truecolor(127 ,255, 0),
+                    4..=6 => block.truecolor(0 ,255 ,0),
+                    7..=9 => block.truecolor(50 ,205 ,50),
+                    _ => block.truecolor(34 ,139, 34),
                 };
                 print!("{}", colored_block);
             }
@@ -180,12 +180,12 @@ fn display_heatmap(commits: &[Value]) -> Result<(), Box<dyn Error>> {
     }
 
     println!("\nContribution Legend:");
-    print!("{} No contributions    ", "■ ".truecolor(250, 250, 210)); // White
-    print!("{} 1 contribution    ", "■ ".truecolor(152 ,251, 152));    // Yellow
-    print!("{} 2-3 contributions    ", "■ ".truecolor(127 ,255, 0)); // Orange
-    print!("{} 4-6 contributions    ", "■ ".truecolor(0 ,255 ,0));  // Red-Orange
-    print!("{} 7-9 contributions    ", "■ ".truecolor(0 ,255 ,0));   // Red
-    println!("{} 10+ contributions", "■ ".truecolor(34 ,139, 34));     // Dark Red
+    print!("{} No contributions    ", "■ ".truecolor(250, 250, 210));
+    print!("{} 1 contribution    ", "■ ".truecolor(152 ,251, 152));
+    print!("{} 2-3 contributions    ", "■ ".truecolor(127 ,255, 0));
+    print!("{} 4-6 contributions    ", "■ ".truecolor(0 ,255 ,0));
+    print!("{} 7-9 contributions    ", "■ ".truecolor(0 ,255 ,0));
+    println!("{} 10+ contributions", "■ ".truecolor(34 ,139, 34));
 
 
     Ok(())
@@ -209,7 +209,7 @@ async fn prompt_for_contributor(contributors: &[Value]) -> Option<String> {
 
 #[tokio::main]
 async fn main() {
-    let matches = Command::new("github-contributions")
+    let matches = Command::new("contrichecker")
         .version("1.0")
         .about("查看 GitHub 项目贡献者")
         .arg(
