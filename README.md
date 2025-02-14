@@ -10,7 +10,7 @@ Contributor Checker
 
 ### 1. 克隆代码 Clone
 ```sh
-git clone https://github.com/yourusername/contributor_checker.git
+git clone https://github.com/eR3R3/contributor-checker.git
 cd contributor_checker
 
 cargo build --release
