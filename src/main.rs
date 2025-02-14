@@ -209,7 +209,7 @@ async fn prompt_for_contributor(contributors: &[Value]) -> Option<String> {
 
 #[tokio::main]
 async fn main() {
-    let matches = Command::new("contrichecker")
+    let matches = Command::new("cchecker")
         .version("1.0")
         .about("查看 GitHub 项目贡献者")
         .arg(
