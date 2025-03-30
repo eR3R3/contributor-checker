@@ -8,8 +8,7 @@
 ### Use Example
 <img width="966" alt="image" src="https://github.com/user-attachments/assets/11f6fc24-88e3-4299-8f55-f5398b27f51d" />
 ### Rejection Example
-<img width="304" alt="image" src="https://github.com/user-attachments/assets/50668cf8-d30c-4dab-9cce-e608e64c82ec" />
-
+<img width="942" alt="image" src="https://github.com/user-attachments/assets/602b4576-ca10-4913-8a98-6d2165ed2fa3" />
 
 
 ## 📦 安装
