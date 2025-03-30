@@ -1,6 +1,8 @@
+
+# Contributor Checker
 ## A Heatmap Generator CLI for Any Github Repository You Want To Access (Include Ranking)
-Contributor Checker
 🚀 一个 Rust CLI 工具，可以获取 GitHub 项目的贡献情况，并显示类似 GitHub 主页贡献图的彩色网格。
+
 
 ## Demo 
 ### Use Example
@@ -8,14 +10,12 @@ Contributor Checker
 ### Rejection Example
 <img width="304" alt="image" src="https://github.com/user-attachments/assets/50668cf8-d30c-4dab-9cce-e608e64c82ec" />
 
-# Contributor Checker
 
-🚀 一个 Rust CLI 工具，可以获取 GitHub 项目的贡献情况，并显示类似 GitHub 主页贡献图的彩色网格。
 
 ## 📦 安装
 
 ### 1. 克隆代码 Clone
-```sh
+```
 git clone https://github.com/eR3R3/contributor-checker.git
 
 cd contributor-checker
