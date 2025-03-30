@@ -2,6 +2,12 @@
 Contributor Checker
 🚀 一个 Rust CLI 工具，可以获取 GitHub 项目的贡献情况，并显示类似 GitHub 主页贡献图的彩色网格。
 
+## Demo 
+### Use Example
+<img width="966" alt="image" src="https://github.com/user-attachments/assets/11f6fc24-88e3-4299-8f55-f5398b27f51d" />
+### Rejection Example
+<img width="304" alt="image" src="https://github.com/user-attachments/assets/50668cf8-d30c-4dab-9cce-e608e64c82ec" />
+
 # Contributor Checker
 
 🚀 一个 Rust CLI 工具，可以获取 GitHub 项目的贡献情况，并显示类似 GitHub 主页贡献图的彩色网格。
